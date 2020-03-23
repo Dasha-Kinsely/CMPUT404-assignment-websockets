@@ -6,7 +6,7 @@
     <meta content='width=device-width; height=device-height; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;' name='viewport' />
     <meta name="viewport" content="width=device-width" />
     <meta name="license" content="
-        Copyright 2013 Google, Abram Hindle
+        Copyright 2020 Yun Tai Liu
         
         Licensed under the Apache License, Version 2.0 (the "License");
         you may not use this file except in compliance with the License.
@@ -25,14 +25,20 @@
   <body bgcolor="white" height="100%" width="100%"> 
     <div id="debug"></div>
     <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas> 
+    <!--<canvas id="c2" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas> -->
 
     <script>
       // Fix me
+
 var canvas = document.getElementById('c');
+//var canvas2 = document.getElementById('c2');
 var host = window.location.host;
 var context = canvas.getContext("2d");
+//var context2 = canvas2.getContext("2d");
 var W = canvas.width  = window.innerWidth-6;
+//var W2 = canvas2.width  = window.innerWidth-6;
 var H = canvas.height = window.innerHeight-50;
+//var H2 = canvas2.height = window.innerHeight-50;
 var wscounter = 0;
 var socket;
 
@@ -42,6 +48,32 @@ function debug(str) {
 }
 debug("Test");
 
+//Copied from previous assignment and made some changes
+function sendJSONXMLHTTPRequest(url, obj, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+            try {
+                if (xhr.status == 200) {
+                    var res = JSON.parse(xhr.response);
+                    callback(res);
+                }
+            }
+            catch (e) {
+                alert('Error: ' + e.name);
+            }
+        }
+    };
+    //XXX: POST to a URL
+    xhr.open('POST', url);
+    //XXX: set the mimetype and the accept headers!
+    // Remember to use application/json !
+    headers = ['Content-Type', 'application/json', 'Accept'];
+    xhr.setRequestHeader(headers[0], headers[1]);
+    xhr.setRequestHeader(headers[2], headers[1]);
+    //returns nothing but sets the headers for send()
+    xhr.send(JSON.stringify(obj));
+}
 world = {};
 
 //XXX: TODO Make this prettier!
@@ -125,6 +157,14 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
+    if (socket.readyState === 1){
+        let address = `http://${host}/entity/${entity}`;
+        socket.send(JSON.stringify({[entity]:data}));
+        sendJSONXMLHTTPRequest(address, data, callbackSetter)
+    }
+}
+function callbackSetter(res){
+    drawNextFrame()
 }
 var counter = 0;
 function addEntityWithoutName(data) {
@@ -132,7 +172,77 @@ function addEntityWithoutName(data) {
     addEntity(name,data);
 }
 
-// canvas + mouse/touch is complicated 
+function update() {
+    drawFrame();
+}
+function worldSetter(res){
+    world = res;
+    drawNextFrame();
+}
+function wsSetup() {
+    var url = "ws://"+host+"/subscribe";   
+    socket = new WebSocket(url);
+    socket.onopen = function() {
+        //XXX: TODO What are you going to do here?
+        let address = `http://${host}/world`;
+        sendJSONXMLHTTPRequest(address, null, worldSetter);
+        drawFrame();
+    };
+    socket.onerror = function(msg) {
+        debug("WebSocket Error:" + msg.data);
+    };
+    socket.onmessage = function(msg) {  
+        try {
+            debug("WebSocket Recv:" + msg.data);
+            //XXX: TODO What are you going to do here? 
+            let msgdata = JSON.parse(msg.data);
+            for (i in msgdata){
+                world[i] = msgdata[i];
+                drawNextFrame();
+            }           
+        } catch (e) {
+            alert("socket on message: " + e);
+        }
+    }; 
+}
+
+wsSetup();
+
+//https://codepen.io/towc/pen/VYbYvQ
+var size = 1,
+    occupation = 1,
+    repaintColor = 'rgba(0, 0, 0, .04)';
+    
+var colors = [],
+    dots = [],
+    dotsVel = [],
+    accelleration = .05;
+    portion = 360/W2;
+for(var i = 0; i < W2; ++i){
+  colors[i] = portion * i;
+  dots[i] = H2;
+  dotsVel[i] = 10;
+}
+//rainbow-drops animation is defined here.
+function anim(){
+  window.requestAnimationFrame(anim);
+  context2.fillStyle = repaintColor;
+  context2.fillRect(0, 0, W2, H2);
+
+  for(var i = 0; i < W2; ++i){
+    var currentY = dots[i] - 1;
+    dots[i] += dotsVel[i] += accelleration;
+    context2.fillStyle = 'hsl('+ colors[i] + ', 80%, 50%)';
+    context2.fillRect(occupation * i, currentY, size, dotsVel[i] + 1);
+    if(dots[i] > H2 && Math.random() < .01){
+      dots[i] = dotsVel[i] = 0;
+    }
+  }
+}
+//run rainbow-drops animation
+anim();
+
+      // canvas + mouse/touch is complicated 
 // I give you this because well the mouse/touch stuff is a total
 // pain to get right. This has some out of context bug too.
 mouse = (function() {
@@ -227,7 +337,6 @@ mouse = (function() {
     self.mouseinstall();
     return self;
 })();
-
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
@@ -242,35 +351,6 @@ mouse.mousedraggers.push(function(x,y,clicked,e) {
     addEntityWithoutName({'x':x,'y':y,'colour':'green',
                           'radius':10});
 });
-
-
-function update() {
-    drawFrame();
-}
-
-
-function wsSetup() {
-    var url = "ws://"+host+"/subscribe";   
-    socket = new WebSocket(url);
-    socket.onopen = function() {
-        //XXX: TODO What are you going to do here?
-    };
-    socket.onerror = function(msg) {
-        debug("WebSocket Error:" + msg.data);
-    };
-    socket.onmessage = function(msg) {  
-        try {
-            debug("WebSocket Recv:" + msg.data);
-            //XXX: TODO What are you going to do here?            
-        } catch (e) {
-            alert("socket on message: " + e);
-        }
-    }; 
-}
-
-wsSetup();
-
-
 
 
 // 30 frames per second
