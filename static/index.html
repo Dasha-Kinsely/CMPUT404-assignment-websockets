@@ -217,24 +217,24 @@ var colors = [],
     dots = [],
     dotsVel = [],
     accelleration = .05;
-    portion = 360/W2;
-for(var i = 0; i < W2; ++i){
+    portion = 360/W;
+for(var i = 0; i < W; ++i){
   colors[i] = portion * i;
-  dots[i] = H2;
+  dots[i] = H;
   dotsVel[i] = 10;
 }
 //rainbow-drops animation is defined here.
 function anim(){
   window.requestAnimationFrame(anim);
-  context2.fillStyle = repaintColor;
-  context2.fillRect(0, 0, W2, H2);
+  context.fillStyle = repaintColor;
+  context.fillRect(0, 0, W, H);
 
-  for(var i = 0; i < W2; ++i){
+  for(var i = 0; i < W; ++i){
     var currentY = dots[i] - 1;
     dots[i] += dotsVel[i] += accelleration;
-    context2.fillStyle = 'hsl('+ colors[i] + ', 80%, 50%)';
-    context2.fillRect(occupation * i, currentY, size, dotsVel[i] + 1);
-    if(dots[i] > H2 && Math.random() < .01){
+    context.fillStyle = 'hsl('+ colors[i] + ', 80%, 50%)';
+    context.fillRect(occupation * i, currentY, size, dotsVel[i] + 1);
+    if(dots[i] > H && Math.random() < .01){
       dots[i] = dotsVel[i] = 0;
     }
   }
