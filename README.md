@@ -1,6 +1,6 @@
 NOTE:
 My code is not working, it didn't pass the freetests.py. I'm not sure about what caused it. Sorry.
-For the making it prettier, I added the rainbow rain effect in the background using an online course as quoted.
+For the making it prettier, I added the rainbow rain effect in the background using an online source as referenced.
 
 # CMPUT404-assignment-websockets
 
